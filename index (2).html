@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LAST EDEN｜最後伊甸 — 3A 科幻末日生存官方網站</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Three.js (3D 互動引擎) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts (未來科技感字體與清晰繁中字體) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            display: ['"Orbitron"', '"Noto Sans TC"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 全域末日氛圍與動畫 */
+    body {
+      background-color: #07080a;
+      color: #e4e4e7;
+      overflow-x: hidden;
+    }
+
+    @keyframes floatDust {
+      0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0.2; }
+      50% { transform: translateY(-28px) translateX(18px); opacity: 0.75; }
+    }
+
+    @keyframes fogDrift {
+      0% { transform: translateX(-5%) scale(1.05); }
+      50% { transform: translateX(5%) scale(1.12); }
+      100% { transform: translateX(-5%) scale(1.05); }
+    }
+
+    @keyframes glitchSkew {
+      0%, 92%, 100% { transform: skew(0deg); text-shadow: none; }
+      94% { transform: skew(-4deg); text-shadow: -3px 0 #ef4444, 3px 0 #22d3ee; }
+      96% { transform: skew(4deg); text-shadow: 3px 0 #ef4444, -3px 0 #22d3ee; }
+      98% { transform: skew(-2deg); }
+    }
+
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes spinReverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+
+    .animate-fog { animation: fogDrift 22s ease-in-out infinite; }
+    .animate-glitch { animation: glitchSkew 6s infinite; }
+    .animate-spin-slow { animation: spinSlow 30s linear infinite; }
+    .animate-spin-reverse { animation: spinReverse 18s linear infinite; }
+
+    .scanline-overlay {
+      background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.28) 51%);
+      background-size: 100% 4px;
+    }
+
+    /* 捲動進場動畫類別 */
+    .reveal-section {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.85s ease-out, transform 0.85s ease-out;
+    }
+    .reveal-section.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* 角色切換淡入淡出 */
+    .char-fade {
+      transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out;
+    }
+    .char-fade.switching {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  </style>
+</head>
+<body class="selection:bg-cyan-500/30 selection:text-cyan-200">
+
+  <!-- 頂部閱讀進度條 -->
+  <div class="fixed top-0 left-0 right-0 h-[2px] bg-zinc-900 z-50">
+    <div id="scroll-progress" class="h-full bg-gradient-to-r from-red-600 via-cyan-400 to-emerald-400 transition-all duration-150" style="width: 0%;"></div>
+  </div>
+
+  <!-- 固定頂部導覽列 -->
+  <header class="fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-md border-b border-zinc-800/70">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <!-- Brand Logo -->
+      <a href="#home" class="flex items-center gap-3 text-left group">
+        <div class="w-8 h-8 rounded border border-cyan-500/50 bg-cyan-950/30 flex items-center justify-center group-hover:border-cyan-400 transition-colors">
+          <i data-lucide="radio" class="w-4 h-4 text-cyan-400 animate-pulse"></i>
+        </div>
+        <div>
+          <div class="font-display font-bold tracking-[0.2em] text-sm sm:text-base text-white">LAST EDEN</div>
+          <div class="text-[10px] font-mono text-zinc-500 tracking-widest">SECTOR 07 // 2189</div>
+        </div>
+      </a>
+
+      <!-- 桌面版導覽選單 -->
+      <nav id="desktop-nav" class="hidden md:flex items-center gap-1 lg:gap-2">
+        <a href="#home" data-nav="home" class="nav-link px-3 py-1.5 rounded text-xs font-mono tracking-wider transition-all flex items-center gap-1.5 bg-cyan-500/15 text-cyan-300 border border-cyan-500/40">
+          <span class="text-[10px] opacity-60">01</span><span>HOME</span>
+        </a>
+        <a href="#world" data-nav="world" class="nav-link px-3 py-1.5 rounded text-xs font-mono tracking-wider transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+          <span class="text-[10px] opacity-60">02</span><span>WORLD</span>
+        </a>
+        <a href="#characters" data-nav="characters" class="nav-link px-3 py-1.5 rounded text-xs font-mono tracking-wider transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+          <span class="text-[10px] opacity-60">03</span><span>SURVIVORS</span>
+        </a>
+        <a href="#story" data-nav="story" class="nav-link px-3 py-1.5 rounded text-xs font-mono tracking-wider transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+          <span class="text-[10px] opacity-60">04</span><span>STORY</span>
+        </a>
+        <a href="#explore" data-nav="explore" class="nav-link px-3 py-1.5 rounded text-xs font-mono tracking-wider transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+          <span class="text-[10px] opacity-60">05</span><span>EXPLORE</span>
+        </a>
+        <a href="#final" data-nav="final" class="nav-link px-3 py-1.5 rounded text-xs font-mono tracking-wider transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+          <span class="text-[10px] opacity-60">06</span><span>DECISION</span>
+        </a>
+      </nav>
+
+      <!-- 系統狀態指示 & 手機選單按鈕 -->
+      <div class="flex items-center gap-3">
+        <div class="hidden lg:flex items-center gap-2 text-[11px] font-mono text-red-400 bg-red-950/30 border border-red-900/50 px-2.5 py-1 rounded">
+          <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+          <span>ARK POWER: 3.8%</span>
+        </div>
+        <button id="mobile-menu-btn" class="md:hidden p-2 text-zinc-300 hover:text-white border border-zinc-800 rounded bg-zinc-900/80" aria-label="Toggle Menu">
+          <i data-lucide="menu" id="menu-icon-open" class="w-5 h-5"></i>
+          <i data-lucide="x" id="menu-icon-close" class="w-5 h-5 hidden"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- 手機版下拉選單 -->
+    <div id="mobile-menu" class="hidden md:hidden bg-zinc-950/95 backdrop-blur-lg border-b border-zinc-800 px-4 py-4 space-y-2">
+      <a href="#home" class="mobile-nav-link block w-full text-left px-4 py-3 rounded font-mono text-sm text-cyan-300 bg-cyan-950/40 border border-cyan-500/30">01 // HOME</a>
+      <a href="#world" class="mobile-nav-link block w-full text-left px-4 py-3 rounded font-mono text-sm text-zinc-400 hover:bg-zinc-900">02 // WORLD</a>
+      <a href="#characters" class="mobile-nav-link block w-full text-left px-4 py-3 rounded font-mono text-sm text-zinc-400 hover:bg-zinc-900">03 // SURVIVORS</a>
+      <a href="#story" class="mobile-nav-link block w-full text-left px-4 py-3 rounded font-mono text-sm text-zinc-400 hover:bg-zinc-900">04 // STORY</a>
+      <a href="#explore" class="mobile-nav-link block w-full text-left px-4 py-3 rounded font-mono text-sm text-zinc-400 hover:bg-zinc-900">05 // EXPLORE</a>
+      <a href="#final" class="mobile-nav-link block w-full text-left px-4 py-3 rounded font-mono text-sm text-zinc-400 hover:bg-zinc-900">06 // DECISION</a>
+    </div>
+  </header>
+
+  <!-- =========================================================
+       01 HOME｜首頁
+  ========================================================= -->
+  <section id="home" class="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden">
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#1e293b_0%,#09090b_55%,#030303_100%)]"></div>
+    <div class="absolute inset-0 scanline-overlay opacity-30 pointer-events-none"></div>
+    
+    <!-- 動態漂浮煙霧層 -->
+    <div class="absolute inset-0 opacity-35 animate-fog pointer-events-none"
+      style="background-image: radial-gradient(circle at 30% 60%, rgba(148,163,184,0.18), transparent 45%), radial-gradient(circle at 75% 35%, rgba(34,211,238,0.14), transparent 50%);">
+    </div>
+
+    <!-- 廢墟城市天際線 SVG -->
+    <svg class="absolute bottom-0 left-0 right-0 w-full h-[45vh] opacity-40 pointer-events-none" viewBox="0 0 1440 400" preserveAspectRatio="none">
+      <path d="M0,400 L0,250 L60,250 L60,180 L110,195 L110,280 L180,280 L180,120 L230,110 L245,260 L320,260 L320,150 L390,170 L390,290 L480,290 L480,80 L540,95 L555,240 L650,240 L650,160 L720,160 L720,270 L810,270 L810,60 L860,75 L880,230 L960,230 L960,140 L1040,155 L1040,285 L1140,285 L1140,110 L1210,125 L1210,260 L1320,260 L1320,190 L1440,210 L1440,400 Z" fill="#09090b" />
+      <rect x="832" y="0" width="4" height="230" fill="#22d3ee" opacity="0.3" />
+    </svg>
+
+    <!-- 懸浮塵埃粒子容器 (由 JS 動態生成) -->
+    <div id="dust-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+    <!-- 主視覺中央內容 -->
+    <div class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-zinc-700/80 bg-zinc-900/70 backdrop-blur-sm text-xs font-mono tracking-[0.25em] text-cyan-400 mb-6">
+        <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+        <span>AAA SCI-FI POST-APOCALYPTIC SURVIVAL</span>
+      </div>
+
+      <h1 class="font-display text-5xl sm:text-7xl md:text-8xl font-black tracking-[0.18em] text-white mb-3 animate-glitch">
+        LAST EDEN
+      </h1>
+      <div class="text-xl sm:text-3xl font-light tracking-[0.45em] text-zinc-400 mb-8">
+        最 後 伊 甸
+      </div>
+
+      <p class="max-w-2xl mx-auto text-base sm:text-xl text-zinc-300 font-light leading-relaxed tracking-wider mb-10 border-y border-zinc-800/80 py-4 bg-black/30 backdrop-blur-xs">
+        「當世界失去光明，生存便成為唯一的信仰。」
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="#world"
+          class="group relative px-8 py-4 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-400/60 font-mono text-sm tracking-[0.25em] uppercase transition-all duration-300 shadow-[0_0_30px_rgba(34,211,238,0.15)] hover:shadow-[0_0_40px_rgba(34,211,238,0.35)] flex items-center gap-3">
+          <i data-lucide="crosshair" class="w-4 h-4 group-hover:rotate-90 transition-transform duration-300"></i>
+          <span>ENTER THE WASTELAND</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Scroll Down 提示 -->
+    <a href="#world"
+      class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-zinc-500 hover:text-cyan-400 transition-colors font-mono text-[11px] tracking-[0.3em]">
+      <span>SCROLL DOWN</span>
+      <i data-lucide="chevron-down" class="w-5 h-5 animate-bounce"></i>
+    </a>
+  </section>
+
+  <!-- =========================================================
+       02 WORLD｜世界觀介紹
+  ========================================================= -->
+  <section id="world" class="relative py-24 sm:py-32 px-4 sm:px-6 border-t border-zinc-900 bg-[#08090c]">
+    <div class="max-w-7xl mx-auto reveal-section">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+        <div>
+          <div class="font-mono text-xs tracking-[0.3em] text-cyan-400 mb-2">02 // ARCHIVE DATABASE</div>
+          <h2 class="font-display text-3xl sm:text-5xl font-bold tracking-wider text-white">
+            WORLD OVERVIEW <span class="font-sans text-zinc-500 font-light text-2xl sm:text-3xl block sm:inline sm:ml-3">世界觀檔案</span>
+          </h2>
+        </div>
+        <div class="font-mono text-xs text-zinc-400 border-l-2 border-red-500 pl-4 max-w-md">
+          ERA: 2189 A.D. // LOCATION: SECTOR 07<br />
+          STATUS: CRITICAL INFRASTRUCTURE FAILURE
+        </div>
+      </div>
+
+      <!-- 資訊卡片網格 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+        <!-- Card 1 -->
+        <div class="relative bg-zinc-950/90 border border-zinc-800 hover:border-zinc-600 p-6 sm:p-8 rounded-lg transition-all duration-300 group overflow-hidden">
+          <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-zinc-800/30 to-transparent pointer-events-none"></div>
+          <div class="flex items-center justify-between font-mono text-xs text-zinc-500 mb-4">
+            <span>LOG // 2189.04</span><span>01 / 04</span>
+          </div>
+          <h3 class="font-display text-2xl font-bold tracking-wider text-white mb-1 group-hover:text-cyan-300 transition-colors">THE COLLAPSE</h3>
+          <div class="text-sm font-medium text-zinc-400 mb-5 tracking-widest">文明崩壞</div>
+          <p class="text-zinc-300 text-sm sm:text-base leading-relaxed mb-6 font-light">
+            西元2189年，全球性能源計畫「ECLIPSE」發生連鎖反應堆芯熔毀。無數城市在數週內斷電癱瘓，社會秩序瞬間瓦解，人類引以為傲的科技文明墜入永夜。
+          </p>
+          <div class="inline-block font-mono text-xs px-3 py-1.5 rounded border bg-black/60 border-red-900/60 text-red-400">
+            POPULATION LOSS: 87.4%
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="relative bg-zinc-950/90 border border-zinc-800 hover:border-zinc-600 p-6 sm:p-8 rounded-lg transition-all duration-300 group overflow-hidden">
+          <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-zinc-800/30 to-transparent pointer-events-none"></div>
+          <div class="flex items-center justify-between font-mono text-xs text-zinc-500 mb-4">
+            <span>ENV // TOXICITY</span><span>02 / 04</span>
+          </div>
+          <h3 class="font-display text-2xl font-bold tracking-wider text-white mb-1 group-hover:text-cyan-300 transition-colors">THE CONTAMINATION</h3>
+          <div class="text-sm font-medium text-zinc-400 mb-5 tracking-widest">環境污染</div>
+          <p class="text-zinc-300 text-sm sm:text-base leading-relaxed mb-6 font-light">
+            高濃度放射性塵埃與未知合成粒子籠罩平流層，天空長年呈現死寂的灰霾。地表水源與土壤遭到不可逆的毒素滲透，荒廢的鋼鐵叢林正被變異植物瘋狂吞噬。
+          </p>
+          <div class="inline-block font-mono text-xs px-3 py-1.5 rounded border bg-black/60 border-emerald-900/60 text-emerald-400">
+            ATMOSPHERE: LETHAL
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="relative bg-zinc-950/90 border border-zinc-800 hover:border-zinc-600 p-6 sm:p-8 rounded-lg transition-all duration-300 group overflow-hidden">
+          <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-zinc-800/30 to-transparent pointer-events-none"></div>
+          <div class="flex items-center justify-between font-mono text-xs text-zinc-500 mb-4">
+            <span>SYS // PROTOCOL</span><span>03 / 04</span>
+          </div>
+          <h3 class="font-display text-2xl font-bold tracking-wider text-white mb-1 group-hover:text-cyan-300 transition-colors">SURVIVAL RULES</h3>
+          <div class="text-sm font-medium text-zinc-400 mb-5 tracking-widest">生存法則</div>
+          <div class="text-zinc-300 text-sm sm:text-base leading-relaxed mb-6 font-light space-y-1">
+            <p>1. 夜晚降臨時，對光與聲音極度敏感的變異體將傾巢而出。</p>
+            <p>2. 未經重度蒸餾與過濾的水源等同劇毒。</p>
+            <p>3. 電力即是生命，所有防禦與維生裝置皆仰賴稀缺電池。</p>
+            <p>4. 防護面罩濾芯耗盡前必須撤離高污染區。</p>
+          </div>
+          <div class="inline-block font-mono text-xs px-3 py-1.5 rounded border bg-black/60 border-amber-900/60 text-amber-400">
+            SURVIVAL RATE: &lt; 4.2%
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="relative bg-zinc-950/90 border border-zinc-800 hover:border-zinc-600 p-6 sm:p-8 rounded-lg transition-all duration-300 group overflow-hidden">
+          <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-zinc-800/30 to-transparent pointer-events-none"></div>
+          <div class="flex items-center justify-between font-mono text-xs text-zinc-500 mb-4">
+            <span>LOC // ARK-07</span><span>04 / 04</span>
+          </div>
+          <h3 class="font-display text-2xl font-bold tracking-wider text-white mb-1 group-hover:text-cyan-300 transition-colors">THE LAST SHELTER</h3>
+          <div class="text-sm font-medium text-zinc-400 mb-5 tracking-widest">最後避難所</div>
+          <p class="text-zinc-300 text-sm sm:text-base leading-relaxed mb-6 font-light">
+            深埋於第七區地底三百公尺的「ARK 避難所」收容了最後一批倖存者。然而主反應爐核心即將耗盡，唯一能重新啟動地熱能源矩陣的密鑰，遺落在封鎖已久的地表城市核心。
+          </p>
+          <div class="inline-block font-mono text-xs px-3 py-1.5 rounded border bg-black/60 border-cyan-900/60 text-cyan-400">
+            CORE POWER: 03.8% CRITICAL
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       03 CHARACTERS｜角色介紹
+  ========================================================= -->
+  <section id="characters" class="relative py-24 sm:py-32 px-4 sm:px-6 border-t border-zinc-900 bg-gradient-to-b from-red-950/35 via-zinc-950 to-zinc-950 transition-colors duration-700">
+    <div class="max-w-7xl mx-auto reveal-section">
+      <!-- 標題與角色編號 -->
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
+        <div>
+          <div class="font-mono text-xs tracking-[0.3em] text-cyan-400 mb-2">03 // SURVIVOR ROSTER</div>
+          <h2 class="font-display text-3xl sm:text-5xl font-bold tracking-wider text-white">
+            CHARACTERS <span class="font-sans text-zinc-500 font-light text-2xl sm:text-3xl block sm:inline sm:ml-3">倖存者檔案</span>
+          </h2>
+        </div>
+        <div class="font-mono text-xl sm:text-2xl font-bold tracking-widest text-zinc-400">
+          SURVIVOR <span id="char-num-display" class="text-red-400">01</span> / 04
+        </div>
+      </div>
+
+      <!-- 角色切換按鈕列 -->
+      <div id="char-selector-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
+        <!-- 由 JS 動態渲染按鈕 -->
+      </div>
+
+      <!-- 角色詳細資料與立繪展示區 -->
+      <div id="char-content-wrapper" class="char-fade grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        <!-- 左側：角色大型立繪 -->
+        <div class="lg:col-span-5">
+          <div class="relative w-full h-[380px] sm:h-[460px] flex items-center justify-center overflow-hidden rounded-lg border border-zinc-800/80 bg-zinc-950 group">
+            <div id="char-glow-bg" class="absolute inset-0 opacity-40 transition-all duration-700 group-hover:scale-110"
+              style="background: radial-gradient(circle at 50% 40%, #ef444444, transparent 70%);"></div>
+            <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+            
+            <!-- SVG 立繪容器 -->
+            <div id="char-svg-container" class="w-full h-full flex items-center justify-center transition-transform duration-700 ease-out group-hover:scale-105 group-hover:-translate-y-1"></div>
+
+            <!-- 角落 HUD 裝飾 -->
+            <div class="absolute top-3 left-3 font-mono text-xs text-zinc-400">
+              <div id="char-hud-id">ID // KAEL-001</div>
+              <div id="char-hud-status" class="text-red-400">STATUS: ACTIVE</div>
+            </div>
+            <div class="absolute bottom-3 left-3 right-3 bg-black/80 backdrop-blur-md border border-zinc-800 p-3 rounded">
+              <p id="char-quote" class="text-xs sm:text-sm italic text-zinc-300 font-light">「仁慈在第七區活不過今晚。把子彈留給真正的怪物。」</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右側：角色背景與能力屬性圖表 -->
+        <div class="lg:col-span-7 bg-zinc-950/85 backdrop-blur-md border border-zinc-800 p-6 sm:p-8 rounded-lg">
+          <div class="flex flex-wrap items-baseline justify-between gap-2 border-b border-zinc-800 pb-4 mb-6">
+            <div>
+              <h3 class="font-display text-3xl sm:text-4xl font-black tracking-widest text-white">
+                <span id="char-name">KAEL</span>
+                <span id="char-cname" class="font-sans text-xl sm:text-2xl font-normal text-zinc-400 ml-2">凱爾</span>
+              </h3>
+              <div id="char-role" class="font-mono text-xs sm:text-sm mt-1 text-red-400">前軍事組織成員 // VANGUARD</div>
+            </div>
+            <div id="char-personality" class="text-xs font-mono bg-zinc-900 border border-zinc-700 px-3 py-1 rounded text-zinc-300">
+              性格：冷靜、寡言、警戒心極強
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <div class="font-mono text-xs text-zinc-500 mb-2">BIOGRAPHY // 背景紀錄</div>
+            <p id="char-bio" class="text-zinc-300 text-sm sm:text-base leading-relaxed font-light"></p>
+          </div>
+
+          <div class="mb-8">
+            <div class="font-mono text-xs text-zinc-500 mb-1">EQUIPMENT // 隨身武裝</div>
+            <div id="char-gear" class="text-xs sm:text-sm font-mono text-zinc-300 bg-zinc-900/90 px-3 py-2 rounded border border-zinc-800"></div>
+          </div>
+
+          <!-- 能力屬性數值條 -->
+          <div>
+            <div class="font-mono text-xs text-zinc-500 mb-4">COMBAT & SURVIVAL METRICS // 能力評估</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Combat -->
+              <div class="bg-zinc-900/60 p-3 rounded border border-zinc-800/80">
+                <div class="flex items-center justify-between text-xs font-mono mb-2">
+                  <span class="flex items-center gap-1.5 text-zinc-300">
+                    <i data-lucide="shield" class="w-3.5 h-3.5 text-zinc-400"></i> COMBAT 戰鬥火力
+                  </span>
+                  <span id="stat-combat-val" class="font-bold text-white">95%</span>
+                </div>
+                <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div id="stat-combat-bar" class="h-full transition-all duration-700 ease-out rounded-full" style="width: 95%; background-color: #ef4444;"></div>
+                </div>
+              </div>
+              <!-- Medical -->
+              <div class="bg-zinc-900/60 p-3 rounded border border-zinc-800/80">
+                <div class="flex items-center justify-between text-xs font-mono mb-2">
+                  <span class="flex items-center gap-1.5 text-zinc-300">
+                    <i data-lucide="activity" class="w-3.5 h-3.5 text-zinc-400"></i> MEDICAL 醫療生科
+                  </span>
+                  <span id="stat-medical-val" class="font-bold text-white">30%</span>
+                </div>
+                <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div id="stat-medical-bar" class="h-full transition-all duration-700 ease-out rounded-full" style="width: 30%; background-color: #ef4444;"></div>
+                </div>
+              </div>
+              <!-- Explore -->
+              <div class="bg-zinc-900/60 p-3 rounded border border-zinc-800/80">
+                <div class="flex items-center justify-between text-xs font-mono mb-2">
+                  <span class="flex items-center gap-1.5 text-zinc-300">
+                    <i data-lucide="compass" class="w-3.5 h-3.5 text-zinc-400"></i> EXPLORE 廢墟偵查
+                  </span>
+                  <span id="stat-explore-val" class="font-bold text-white">70%</span>
+                </div>
+                <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div id="stat-explore-bar" class="h-full transition-all duration-700 ease-out rounded-full" style="width: 70%; background-color: #ef4444;"></div>
+                </div>
+              </div>
+              <!-- Tech -->
+              <div class="bg-zinc-900/60 p-3 rounded border border-zinc-800/80">
+                <div class="flex items-center justify-between text-xs font-mono mb-2">
+                  <span class="flex items-center gap-1.5 text-zinc-300">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5 text-zinc-400"></i> TECH 機械駭入
+                  </span>
+                  <span id="stat-tech-val" class="font-bold text-white">45%</span>
+                </div>
+                <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div id="stat-tech-bar" class="h-full transition-all duration-700 ease-out rounded-full" style="width: 45%; background-color: #ef4444;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       04 STORY｜故事探索 (電影式章節推進)
+  ========================================================= -->
+  <section id="story" class="relative py-24 sm:py-32 px-4 sm:px-6 border-t border-zinc-900 bg-[#060709]">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-20 reveal-section">
+        <div class="font-mono text-xs tracking-[0.3em] text-cyan-400 mb-2">04 // MEMORY FRAGMENTS</div>
+        <h2 class="font-display text-3xl sm:text-5xl font-bold tracking-wider text-white mb-4">
+          THE STORY <span class="font-sans text-zinc-500 font-light text-2xl sm:text-3xl block sm:inline sm:ml-3">主線章節</span>
+        </h2>
+        <p class="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto font-light">
+          隨著深入第七區封鎖線，遺失的記憶晶片將逐步重現 2189 年災難背後的殘酷真相。
+        </p>
+      </div>
+
+      <!-- 四個故事章節垂直電影敘事 -->
+      <div class="space-y-16 sm:space-y-24 relative before:absolute before:left-4 sm:before:left-8 before:top-0 before:bottom-0 before:w-[1px] before:bg-gradient-to-b before:from-cyan-500/50 before:via-zinc-700 before:to-red-500/50">
+        
+        <!-- Chapter 01 -->
+        <div class="relative pl-12 sm:pl-20 group reveal-section">
+          <div class="absolute left-[11px] sm:left-[27px] top-2 w-3 h-3 rounded-full bg-zinc-950 border-2 border-cyan-400 group-hover:scale-150 group-hover:bg-cyan-400 transition-all duration-300"></div>
+          <div class="rounded-xl border border-zinc-800/90 p-6 sm:p-10 shadow-2xl transition-all duration-500 hover:border-zinc-600"
+            style="background: radial-gradient(circle at 20% 30%, rgba(220, 38, 38, 0.18), transparent 60%), linear-gradient(to bottom, #09090b, #18181b);">
+            <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-xs text-cyan-400 mb-3">
+              <span class="font-bold tracking-widest">CHAPTER 01</span>
+              <span class="text-zinc-500">DAY 00 // 04:12 AM // DEPTH -300M</span>
+            </div>
+            <h3 class="font-display text-2xl sm:text-4xl font-bold tracking-wider text-white mb-6">
+              THE AWAKENING <span class="font-sans text-lg sm:text-2xl font-light text-zinc-400 ml-2">— 深淵甦醒</span>
+            </h3>
+            <div class="space-y-3 border-l border-zinc-700/70 pl-4 sm:pl-6 text-zinc-300 text-sm sm:text-base leading-relaxed font-light">
+              <p>刺耳的紅色警報劃破了 ARK 避難所的寂靜。</p>
+              <p>你在低溫休眠艙的破碎玻璃中睜開雙眼，腦海中只剩下一片空白與劇烈的耳鳴。</p>
+              <p>主控室螢幕閃爍著冰冷的倒數：主能源核心將在 72 小時內徹底熄滅，維生系統即將停擺。</p>
+              <p>而在你緊握的左手掌心，嵌入了一枚染血的加密資料晶片——「SECTOR 07 CORE」。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 02 -->
+        <div class="relative pl-12 sm:pl-20 group reveal-section">
+          <div class="absolute left-[11px] sm:left-[27px] top-2 w-3 h-3 rounded-full bg-zinc-950 border-2 border-cyan-400 group-hover:scale-150 group-hover:bg-cyan-400 transition-all duration-300"></div>
+          <div class="rounded-xl border border-zinc-800/90 p-6 sm:p-10 shadow-2xl transition-all duration-500 hover:border-zinc-600"
+            style="background: radial-gradient(circle at 80% 40%, rgba(16, 185, 129, 0.15), transparent 60%), linear-gradient(to bottom, #18181b, #09090b);">
+            <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-xs text-cyan-400 mb-3">
+              <span class="font-bold tracking-widest">CHAPTER 02</span>
+              <span class="text-zinc-500">DAY 02 // 17:45 PM // SECTOR 07</span>
+            </div>
+            <h3 class="font-display text-2xl sm:text-4xl font-bold tracking-wider text-white mb-6">
+              THE LOST CITY <span class="font-sans text-lg sm:text-2xl font-light text-zinc-400 ml-2">— 失落之城</span>
+            </h3>
+            <div class="space-y-3 border-l border-zinc-700/70 pl-4 sm:pl-6 text-zinc-300 text-sm sm:text-base leading-relaxed font-light">
+              <p>厚重的氣密閘門緩緩升起，百年未見的灰暗天光傾瀉而下。</p>
+              <p>曾經繁華的第七區如今已成鋼鐵墳場，巨型藤蔓纏繞著傾頹的摩天大樓，酸雨腐蝕著生鏽的廣告全息看板。</p>
+              <p>在收集淨水與電池的途中，你遭遇了盤踞在暗影中的夜行變異體，並與同樣在尋找真相的倖存者小隊交會。</p>
+              <p>每一步都踩在文明的骸骨之上，而遠方高塔頂端，微弱的藍光正如同心臟般跳動。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 03 -->
+        <div class="relative pl-12 sm:pl-20 group reveal-section">
+          <div class="absolute left-[11px] sm:left-[27px] top-2 w-3 h-3 rounded-full bg-zinc-950 border-2 border-cyan-400 group-hover:scale-150 group-hover:bg-cyan-400 transition-all duration-300"></div>
+          <div class="rounded-xl border border-zinc-800/90 p-6 sm:p-10 shadow-2xl transition-all duration-500 hover:border-zinc-600"
+            style="background: radial-gradient(circle at 30% 60%, rgba(245, 158, 11, 0.16), transparent 60%), linear-gradient(to bottom, #09090b, #111827);">
+            <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-xs text-cyan-400 mb-3">
+              <span class="font-bold tracking-widest">CHAPTER 03</span>
+              <span class="text-zinc-500">DAY 05 // 23:58 PM // LAB-OMEGA</span>
+            </div>
+            <h3 class="font-display text-2xl sm:text-4xl font-bold tracking-wider text-white mb-6">
+              THE TRUTH <span class="font-sans text-lg sm:text-2xl font-light text-zinc-400 ml-2">— 禁忌真相</span>
+            </h3>
+            <div class="space-y-3 border-l border-zinc-700/70 pl-4 sm:pl-6 text-zinc-300 text-sm sm:text-base leading-relaxed font-light">
+              <p>當諾克斯成功破解資料晶片的最後一道防火牆，全息投影在塵埃中展開。</p>
+              <p>2189 年的「ECLIPSE」根本不是能源意外——那是舊時代財團為了強行開啟「高維度零點能源」而進行的秘密活體實驗。</p>
+              <p>那些在黑夜中狩獵人類的變異生物，正是當年未能逃出實驗室的早期研究員與市民。</p>
+              <p>而你的記憶之所以被抹除，是因為你正是當年親手按下實驗啟動鈕的首席執行官。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chapter 04 -->
+        <div class="relative pl-12 sm:pl-20 group reveal-section">
+          <div class="absolute left-[11px] sm:left-[27px] top-2 w-3 h-3 rounded-full bg-zinc-950 border-2 border-cyan-400 group-hover:scale-150 group-hover:bg-cyan-400 transition-all duration-300"></div>
+          <div class="rounded-xl border border-zinc-800/90 p-6 sm:p-10 shadow-2xl transition-all duration-500 hover:border-zinc-600"
+            style="background: radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.2), transparent 65%), linear-gradient(to bottom, #111827, #050505);">
+            <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-xs text-cyan-400 mb-3">
+              <span class="font-bold tracking-widest">CHAPTER 04</span>
+              <span class="text-zinc-500">DAY 07 // 00:00 AM // CENTRAL CORE</span>
+            </div>
+            <h3 class="font-display text-2xl sm:text-4xl font-bold tracking-wider text-white mb-6">
+              THE LAST CHOICE <span class="font-sans text-lg sm:text-2xl font-light text-zinc-400 ml-2">— 最終抉擇</span>
+            </h3>
+            <div class="space-y-3 border-l border-zinc-700/70 pl-4 sm:pl-6 text-zinc-300 text-sm sm:text-base leading-relaxed font-light">
+              <p>你終於站在城市核心反應爐的懸空控制台前，腳下是深不見底的幽藍能量深淵。</p>
+              <p>反應爐依然擁有足以照亮整座大陸的龐大能量，但重啟它也可能再次撕裂脆弱的空間屏障。</p>
+              <p>通訊器傳來避難所最後的微弱呼救，身旁的夥伴們靜靜看著你將晶片插入主控槽。</p>
+              <p>人類文明的火種，將在你的指尖迎來重生、審判，或是徹底的終結。</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       05 EXPLORE｜場景探索 (3D 互動城市地圖 + 區域情報)
+  ========================================================= -->
+  <section id="explore" class="relative py-24 sm:py-32 px-4 sm:px-6 border-t border-zinc-900 bg-[#08090c]">
+    <div class="max-w-7xl mx-auto reveal-section">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+        <div>
+          <div class="font-mono text-xs tracking-[0.3em] text-cyan-400 mb-2">05 // TACTICAL RECONNAISSANCE</div>
+          <h2 class="font-display text-3xl sm:text-5xl font-bold tracking-wider text-white">
+            EXPLORE SECTOR 07 <span class="font-sans text-zinc-500 font-light text-2xl sm:text-3xl block sm:inline sm:ml-3">廢墟場景探索</span>
+          </h2>
+        </div>
+        <div class="font-mono text-xs text-zinc-400">
+          互動操作：拖曳旋轉 3D 廢墟全息地圖，或點擊區域標籤查看環境參數
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <!-- 左側 7 欄：互動式 Three.js 3D 城市地圖 -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="relative w-full h-[380px] sm:h-[460px] lg:h-[520px] rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950/90 shadow-2xl">
+            <div id="three-canvas-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+            
+            <div class="absolute top-3 left-3 pointer-events-none flex items-center gap-2 bg-black/75 backdrop-blur-sm border border-zinc-800 px-3 py-1.5 rounded text-xs font-mono text-cyan-400">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+              <span>HOLO-MAP // SECTOR 07 [3D INTERACTIVE]</span>
+            </div>
+            
+            <div class="absolute bottom-3 left-3 right-3 pointer-events-none flex flex-wrap justify-between items-center text-[11px] font-mono text-zinc-400 bg-black/65 backdrop-blur-sm px-3 py-1.5 rounded border border-zinc-800/80">
+              <span>[拖曳旋轉視角 / 滾輪縮放]</span>
+              <span class="text-cyan-400">點擊 3D 光柱信標切換區域</span>
+            </div>
+          </div>
+
+          <!-- 快速區域切換按鈕 -->
+          <div id="zone-buttons-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <!-- 由 JS 動態生成 -->
+          </div>
+        </div>
+
+        <!-- 右側 5 欄：選定場景的詳細全息情報卡片 -->
+        <div id="zone-info-card" class="lg:col-span-5 rounded-lg border border-emerald-500/50 bg-gradient-to-br from-emerald-950/60 via-zinc-900 to-black p-6 sm:p-8 shadow-2xl transition-all duration-500">
+          <div class="flex items-center justify-between font-mono text-xs mb-4">
+            <span id="zone-code-badge" class="px-2.5 py-1 rounded bg-black/60 border border-emerald-500/50 text-emerald-400">
+              ZONE 01 // SELECTED
+            </span>
+            <span class="text-zinc-400 flex items-center gap-1">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+              <span id="zone-coords">COORDS: 28%, 42%</span>
+            </span>
+          </div>
+
+          <h3 id="zone-name" class="font-display text-2xl sm:text-3xl font-black tracking-wider text-white mb-1">
+            ABANDONED CITY
+          </h3>
+          <div id="zone-cname" class="text-base text-zinc-300 mb-6 font-medium">
+            被植物吞噬的廢棄都市
+          </div>
+
+          <!-- 場景視覺示意框 -->
+          <div class="relative h-40 rounded border border-zinc-700/70 bg-black/60 mb-6 overflow-hidden flex items-center justify-center group">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_70%)] group-hover:scale-125 transition-transform duration-700"></div>
+            <div class="text-center z-10 px-4">
+              <i data-lucide="layers" class="w-8 h-8 mx-auto mb-2 text-cyan-400 opacity-80"></i>
+              <div class="font-mono text-xs tracking-widest text-zinc-300">ENVIRONMENT SCAN COMPLETE</div>
+              <div id="zone-radiation" class="font-mono text-[11px] text-zinc-500 mt-1">RADIATION LEVEL: 480 mSv/h</div>
+            </div>
+          </div>
+
+          <p id="zone-desc" class="text-zinc-300 text-sm leading-relaxed mb-6 font-light"></p>
+
+          <!-- 危險程度與污染指數 -->
+          <div class="space-y-4 border-t border-zinc-800/80 pt-5">
+            <div>
+              <div class="flex justify-between font-mono text-xs mb-1.5">
+                <span class="text-zinc-400">THREAT LEVEL 危險程度</span>
+                <span id="zone-danger-text" class="text-emerald-400">HIGH // 高度危險</span>
+              </div>
+              <div class="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
+                <div id="zone-danger-bar" class="h-full transition-all duration-500" style="width: 75%; background-color: #10b981;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="font-mono text-xs text-zinc-400 mb-2">SCAVENGEABLE RESOURCES // 可探索資源</div>
+              <div id="zone-resources-list" class="flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       06 FINAL｜結尾區域 (城市核心能源裝置與三種結局抉擇)
+  ========================================================= -->
+  <section id="final" class="relative min-h-screen py-28 px-4 sm:px-6 border-t border-zinc-900 flex flex-col items-center justify-center overflow-hidden bg-[#040507]">
+    <!-- 背景巨大的發光能源核心裝置 -->
+    <div class="relative mb-12 flex items-center justify-center">
+      <div class="w-56 h-56 sm:w-72 sm:h-72 rounded-full border border-zinc-800 flex items-center justify-center relative animate-spin-slow">
+        <div class="absolute top-0 w-3 h-3 bg-zinc-600 rounded-full"></div>
+        <div class="absolute bottom-0 w-3 h-3 bg-zinc-600 rounded-full"></div>
+        <div class="absolute left-0 w-3 h-3 bg-zinc-600 rounded-full"></div>
+        <div class="absolute right-0 w-3 h-3 bg-zinc-600 rounded-full"></div>
+      </div>
+      <div class="absolute w-40 h-40 sm:w-52 sm:h-52 rounded-full border border-dashed border-cyan-500/40 animate-spin-reverse"></div>
+      
+      <!-- 中央微弱發光核心 -->
+      <div id="final-core-orb" class="absolute w-20 h-20 sm:w-24 sm:h-24 rounded-full transition-all duration-700 flex items-center justify-center bg-cyan-500/30 shadow-[0_0_60px_rgba(34,211,238,0.4)] animate-pulse">
+        <i data-lucide="zap" class="w-8 h-8 text-white"></i>
+      </div>
+    </div>
+
+    <!-- 標題與核心提問 -->
+    <div class="max-w-4xl mx-auto text-center z-10 reveal-section">
+      <div class="font-mono text-xs tracking-[0.35em] text-red-400 mb-3">06 // CENTRAL CORE PROTOCOL</div>
+      <h2 class="font-display text-2xl sm:text-4xl md:text-5xl font-black tracking-[0.15em] text-white mb-3">
+        THE WORLD IS WAITING FOR YOUR DECISION.
+      </h2>
+      <p class="text-lg sm:text-2xl text-zinc-400 font-light tracking-[0.3em] mb-12">
+        世界的未來，將由你決定。
+      </p>
+
+      <!-- 三種結局選項按鈕 -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+        <button data-ending="rebirth" class="ending-btn p-5 rounded-lg border border-zinc-800 hover:border-cyan-400 text-cyan-400 transition-all duration-300 text-center bg-zinc-950/90">
+          <i data-lucide="zap" class="w-6 h-6 mx-auto mb-2"></i>
+          <div class="font-display font-bold tracking-widest text-base text-white">REBIRTH</div>
+          <div class="text-xs text-zinc-400 mt-1">重建文明</div>
+        </button>
+
+        <button data-ending="truth" class="ending-btn p-5 rounded-lg border border-zinc-800 hover:border-amber-400 text-amber-400 transition-all duration-300 text-center bg-zinc-950/90">
+          <i data-lucide="eye" class="w-6 h-6 mx-auto mb-2"></i>
+          <div class="font-display font-bold tracking-widest text-base text-white">THE TRUTH</div>
+          <div class="text-xs text-zinc-400 mt-1">揭露真相</div>
+        </button>
+
+        <button data-ending="extinction" class="ending-btn p-5 rounded-lg border border-zinc-800 hover:border-red-500 text-red-500 transition-all duration-300 text-center bg-zinc-950/90">
+          <i data-lucide="skull" class="w-6 h-6 mx-auto mb-2"></i>
+          <div class="font-display font-bold tracking-widest text-base text-white">EXTINCTION</div>
+          <div class="text-xs text-zinc-400 mt-1">走向毀滅</div>
+        </button>
+      </div>
+
+      <!-- 結局顯示卡片 (預設隱藏，點擊後展現) -->
+      <div id="ending-result-card" class="hidden max-w-3xl mx-auto p-6 sm:p-8 rounded-xl border border-cyan-500 bg-zinc-950/95 backdrop-blur-md text-left mb-16 transition-all duration-500">
+        <div id="ending-code" class="font-mono text-xs tracking-widest mb-2 text-cyan-400">ENDING // 01 // OUTCOME CONFIRMED</div>
+        <h3 id="ending-title" class="font-display text-2xl sm:text-3xl font-bold text-white mb-2">REBIRTH — 重建文明</h3>
+        <p id="ending-subtitle" class="text-sm font-medium mb-4 text-cyan-400"></p>
+        <p id="ending-desc" class="text-zinc-300 text-sm sm:text-base leading-relaxed font-light"></p>
+      </div>
+
+      <!-- 結尾標誌 -->
+      <div class="pt-12 border-t border-zinc-900 text-center">
+        <div class="font-display text-2xl sm:text-3xl font-black tracking-[0.35em] text-white mb-2">LAST EDEN</div>
+        <div class="font-mono text-xs tracking-[0.4em] text-zinc-600">END OF TRANSMISSION.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       互動邏輯與 Three.js 3D 渲染腳本
+  ========================================================= -->
+  <script>
+    // 初始化 Lucide 圖示
+    lucide.createIcons();
+
+    // 1. 生成首頁懸浮塵埃粒子
+    const dustContainer = document.getElementById('dust-container');
+    for (let i = 0; i < 20; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'absolute rounded-full bg-zinc-400/40';
+      const size = (i % 3) + 2;
+      dot.style.width = `${size}px`;
+      dot.style.height = `${size}px`;
+      dot.style.left = `${(i * 17) % 100}%`;
+      dot.style.top = `${(i * 23) % 100}%`;
+      dot.style.animation = `floatDust ${6 + (i % 5)}s ease-in-out infinite`;
+      dot.style.animationDelay = `${i * 0.4}s`;
+      dustContainer.appendChild(dot);
+    }
+
+    // 2. 手機選單開關
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const iconOpen = document.getElementById('menu-icon-open');
+    const iconClose = document.getElementById('menu-icon-close');
+
+    mobileMenuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+      iconOpen.classList.toggle('hidden');
+      iconClose.classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.mobile-nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileMenu.classList.add('hidden');
+        iconOpen.classList.remove('hidden');
+        iconClose.classList.add('hidden');
+      });
+    });
+
+    // 3. 捲動進度條、導覽列高亮與區塊進場偵測
+    const progressBar = document.getElementById('scroll-progress');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = ['home', 'world', 'characters', 'story', 'explore', 'final'];
+
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+        }
+      });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.reveal-section').forEach(el => revealObserver.observe(el));
+
+    window.addEventListener('scroll', () => {
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const current = window.scrollY;
+      progressBar.style.width = totalScroll > 0 ? `${(current / totalScroll) * 100}%` : '0%';
+
+      for (const sec of sections) {
+        const el = document.getElementById(sec);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= window.innerHeight * 0.45 && rect.bottom >= window.innerHeight * 0.45) {
+            navLinks.forEach(link => {
+              if (link.dataset.nav === sec) {
+                link.className = 'nav-link px-3 py-1.5 rounded text-xs font-mono tracking-wider transition-all flex items-center gap-1.5 bg-cyan-500/15 text-cyan-300 border border-cyan-500/40';
+              } else {
+                link.className = 'nav-link px-3 py-1.5 rounded text-xs font-mono tracking-wider transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900';
+              }
+            });
+            break;
+          }
+        }
+      }
+    }, { passive: true });
+
+    // 4. 角色資料庫與切換邏輯
+    const CHARACTERS = [
+      {
+        id: 'kael',
+        num: '01',
+        name: 'KAEL',
+        cname: '凱爾',
+        role: '前軍事組織成員 // VANGUARD',
+        personality: '冷靜、寡言、警戒心極強',
+        bio: '曾經負責守護地下避難所外圍防線的精銳指揮官。在三年前的「黑潮突襲」任務中，為了掩護平民撤離而失去了整支小隊。從此他將情感封鎖在厚重的戰術裝甲之下，只用精準的火力說話。',
+        themeColor: '#ef4444',
+        bgGradient: 'from-red-950/35 via-zinc-950 to-zinc-950',
+        borderClass: 'border-red-500/40',
+        textClass: 'text-red-400',
+        stats: { combat: 95, medical: 30, explore: 70, tech: 45 },
+        quote: '「仁慈在第七區活不過今晚。把子彈留給真正的怪物。」',
+        gear: 'MK-IV 磁軌突擊步槍 / 軍用級呼吸過濾面罩',
+        svg: `
+          <svg viewBox="0 0 400 500" class="w-full h-full max-w-[340px] object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]">
+            <circle cx="200" cy="210" r="145" fill="none" stroke="#ef4444" stroke-width="1" stroke-dasharray="8 6" opacity="0.35" />
+            <circle cx="200" cy="210" r="120" fill="none" stroke="#52525b" stroke-width="0.75" opacity="0.4" />
+            <path d="M90,220 L130,175 L270,175 L310,220 L330,480 L70,480 Z" fill="#27272a" stroke="#52525b" stroke-width="1.5" />
+            <path d="M110,185 L155,165 L245,165 L290,185 L275,340 L125,340 Z" fill="#18181b" stroke="#ef4444" stroke-width="1.5" />
+            <path d="M165,100 C165,70 235,70 235,100 L230,155 L200,170 L170,155 Z" fill="#27272a" stroke="#71717a" stroke-width="1.5" />
+            <path d="M172,112 L228,112 L222,126 L178,126 Z" fill="#ef4444" />
+            <polygon points="200,210 218,225 200,250 182,225" fill="#ef4444" opacity="0.9" />
+            <rect x="255" y="130" width="14" height="290" rx="3" fill="#3f3f46" transform="rotate(12 255 130)" />
+          </svg>`
+      },
+      {
+        id: 'eira',
+        num: '02',
+        name: 'EIRA',
+        cname: '艾拉',
+        role: '地下醫療研究員 // BIO-MEDIC',
+        personality: '理性、溫柔、內心無比堅強',
+        bio: 'ARK 避難所首席生化學家，日以繼夜地在簡陋的實驗室中分析 ECLIPSE 輻射突變樣本。她堅信污染並非人類的終點，冒著感染風險多次深入地表採集變異植物孢子，只為合成出真正的抗體血清。',
+        themeColor: '#22d3ee',
+        bgGradient: 'from-cyan-950/35 via-zinc-950 to-zinc-950',
+        borderClass: 'border-cyan-500/40',
+        textClass: 'text-cyan-400',
+        stats: { combat: 35, medical: 98, explore: 60, tech: 82 },
+        quote: '「只要還有一絲脈搏，我就不會放棄尋找治癒這顆星球的方法。」',
+        gear: '便攜式基因定序儀 / 奈米霧化治療注射器',
+        svg: `
+          <svg viewBox="0 0 400 500" class="w-full h-full max-w-[340px] object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]">
+            <circle cx="200" cy="210" r="145" fill="none" stroke="#22d3ee" stroke-width="1" stroke-dasharray="8 6" opacity="0.35" />
+            <circle cx="200" cy="210" r="120" fill="none" stroke="#52525b" stroke-width="0.75" opacity="0.4" />
+            <path d="M115,195 L155,170 L245,170 L285,195 L305,480 L95,480 Z" fill="#27272a" stroke="#52525b" stroke-width="1.5" />
+            <path d="M150,175 L250,175 L235,380 L165,380 Z" fill="#18181b" stroke="#22d3ee" stroke-width="1.2" />
+            <path d="M168,98 C168,68 232,68 232,98 L226,152 L200,165 L174,152 Z" fill="#27272a" stroke="#71717a" stroke-width="1.5" />
+            <circle cx="215" cy="115" r="11" fill="none" stroke="#22d3ee" stroke-width="2.5" />
+            <circle cx="215" cy="115" r="4" fill="#22d3ee" />
+            <rect x="115" y="240" width="26" height="58" rx="13" fill="#09090b" stroke="#22d3ee" stroke-width="2" />
+            <line x1="128" y1="258" x2="128" y2="280" stroke="#22d3ee" stroke-width="3" />
+            <line x1="117" y1="269" x2="139" y2="269" stroke="#22d3ee" stroke-width="3" />
+          </svg>`
+      },
+      {
+        id: 'nox',
+        num: '03',
+        name: 'NOX',
+        cname: '諾克斯',
+        role: '機械工程師 // HACKER & TECH',
+        personality: '叛逆、幽默、絕頂聰明',
+        bio: '玩世不恭的天才駭客與義體改裝狂人。鮮為人知的是，他曾是 ECLIPSE 能源計畫的底層系統架構師。災難發生後他抹去了自己的檔案，利用廢鐵拼湊出無人機與外骨骼，手中掌握著連高層都畏懼的系統後門。',
+        themeColor: '#f59e0b',
+        bgGradient: 'from-amber-950/35 via-zinc-950 to-zinc-950',
+        borderClass: 'border-amber-500/40',
+        textClass: 'text-amber-400',
+        stats: { combat: 50, medical: 40, explore: 65, tech: 99 },
+        quote: '「別跟我談什麼末日預言，給我一顆高能電池，我能幫你駭進上帝的伺服器。」',
+        gear: 'EMP 脈衝干擾器 / 改裝偵察蜘蛛無人機',
+        svg: `
+          <svg viewBox="0 0 400 500" class="w-full h-full max-w-[340px] object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]">
+            <circle cx="200" cy="210" r="145" fill="none" stroke="#f59e0b" stroke-width="1" stroke-dasharray="8 6" opacity="0.35" />
+            <circle cx="200" cy="210" r="120" fill="none" stroke="#52525b" stroke-width="0.75" opacity="0.4" />
+            <path d="M100,205 L145,172 L255,172 L300,210 L315,480 L85,480 Z" fill="#27272a" stroke="#52525b" stroke-width="1.5" />
+            <path d="M260,185 L310,230 L295,360 L265,355 Z" fill="#27272a" stroke="#f59e0b" stroke-width="2" />
+            <path d="M166,95 C166,68 234,68 234,95 L228,154 L200,166 L172,154 Z" fill="#27272a" stroke="#71717a" stroke-width="1.5" />
+            <rect x="170" y="104" width="60" height="16" rx="4" fill="#18181b" stroke="#f59e0b" stroke-width="2" />
+            <circle cx="185" cy="112" r="4" fill="#f59e0b" />
+            <circle cx="215" cy="112" r="4" fill="#f59e0b" />
+            <polygon points="105,140 130,152 105,164 80,152" fill="#18181b" stroke="#f59e0b" stroke-width="2" />
+          </svg>`
+      },
+      {
+        id: 'lyra',
+        num: '04',
+        name: 'LYRA',
+        cname: '萊拉',
+        role: '流浪探索者 // PATHFINDER',
+        personality: '獨立、敏銳、充滿神秘感',
+        bio: '從小在廢墟地表長大的孤兒，沒有人知道她如何在沒有避難所庇護下存活至今。她對風向、輻射雲流動與變異生物的習性瞭若指掌。她似乎能聽見某種來自城市核心的「低頻呼喚」。',
+        themeColor: '#10b981',
+        bgGradient: 'from-emerald-950/35 via-zinc-950 to-zinc-950',
+        borderClass: 'border-emerald-500/40',
+        textClass: 'text-emerald-400',
+        stats: { combat: 75, medical: 55, explore: 98, tech: 50 },
+        quote: '「廢墟不是死的，它在呼吸。而地底深處的東西……正在甦醒。」',
+        gear: '複合碳纖維獵弓 / 聲納環境熱感應目鏡',
+        svg: `
+          <svg viewBox="0 0 400 500" class="w-full h-full max-w-[340px] object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.9)]">
+            <circle cx="200" cy="210" r="145" fill="none" stroke="#10b981" stroke-width="1" stroke-dasharray="8 6" opacity="0.35" />
+            <circle cx="200" cy="210" r="120" fill="none" stroke="#52525b" stroke-width="0.75" opacity="0.4" />
+            <path d="M95,200 L150,168 L250,168 L305,200 L335,480 L65,480 Z" fill="#27272a" stroke="#52525b" stroke-width="1.5" />
+            <path d="M135,172 L200,230 L265,172 L250,350 L150,350 Z" fill="#18181b" stroke="#10b981" stroke-width="1.2" />
+            <path d="M155,110 Q200,55 245,110 L238,162 L162,162 Z" fill="#18181b" stroke="#10b981" stroke-width="1.5" />
+            <polygon points="180,118 193,121 182,125" fill="#10b981" />
+            <polygon points="220,118 207,121 218,125" fill="#10b981" />
+            <path d="M275,90 Q345,240 275,390" fill="none" stroke="#10b981" stroke-width="3" />
+            <line x1="275" y1="90" x2="275" y2="390" stroke="#71717a" stroke-width="1" stroke-dasharray="4 4" />
+          </svg>`
+      }
+    ];
+
+    let activeCharIndex = 0;
+    const charSelectorGrid = document.getElementById('char-selector-grid');
+    const charSection = document.getElementById('characters');
+    const charWrapper = document.getElementById('char-content-wrapper');
+
+    function renderCharacterSelector() {
+      charSelectorGrid.innerHTML = '';
+      CHARACTERS.forEach((char, idx) => {
+        const isSelected = idx === activeCharIndex;
+        const btn = document.createElement('button');
+        btn.className = `p-3 sm:p-4 rounded-lg border text-left transition-all duration-300 ${
+          isSelected
+            ? `bg-zinc-900/90 ${char.borderClass} shadow-lg`
+            : 'bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700 opacity-70 hover:opacity-100'
+        }`;
+        btn.innerHTML = `
+          <div class="font-mono text-[11px] text-zinc-500">NO. ${char.num}</div>
+          <div class="font-display font-bold text-base sm:text-lg tracking-wider ${isSelected ? 'text-white' : 'text-zinc-400'}">${char.name}</div>
+          <div class="text-xs text-zinc-400">${char.cname}</div>
+        `;
+        btn.addEventListener('click', () => switchCharacter(idx));
+        charSelectorGrid.appendChild(btn);
+      });
+    }
+
+    function updateCharacterDetails(char) {
+      charSection.className = `relative py-24 sm:py-32 px-4 sm:px-6 border-t border-zinc-900 bg-gradient-to-b ${char.bgGradient} transition-colors duration-700`;
+      
+      const numEl = document.getElementById('char-num-display');
+      numEl.textContent = char.num;
+      numEl.className = char.textClass;
+
+      document.getElementById('char-glow-bg').style.background = `radial-gradient(circle at 50% 40%, ${char.themeColor}44, transparent 70%)`;
+      document.getElementById('char-svg-container').innerHTML = char.svg;
+      document.getElementById('char-hud-id').textContent = `ID // ${char.name}-0${char.num}`;
+      
+      const statusEl = document.getElementById('char-hud-status');
+      statusEl.className = char.textClass;
+
+      document.getElementById('char-quote').textContent = char.quote;
+      document.getElementById('char-name').textContent = char.name;
+      document.getElementById('char-cname').textContent = char.cname;
+      
+      const roleEl = document.getElementById('char-role');
+      roleEl.textContent = char.role;
+      roleEl.className = `font-mono text-xs sm:text-sm mt-1 ${char.textClass}`;
+
+      document.getElementById('char-personality').textContent = `性格：${char.personality}`;
+      document.getElementById('char-bio').textContent = char.bio;
+      document.getElementById('char-gear').textContent = char.gear;
+
+      // 更新屬性數值條
+      ['combat', 'medical', 'explore', 'tech'].forEach(stat => {
+        const val = char.stats[stat];
+        document.getElementById(`stat-${stat}-val`).textContent = `${val}%`;
+        const bar = document.getElementById(`stat-${stat}-bar`);
+        bar.style.width = `${val}%`;
+        bar.style.backgroundColor = char.themeColor;
+      });
+    }
+
+    function switchCharacter(idx) {
+      if (idx === activeCharIndex) return;
+      charWrapper.classList.add('switching');
+      setTimeout(() => {
+        activeCharIndex = idx;
+        renderCharacterSelector();
+        updateCharacterDetails(CHARACTERS[idx]);
+        charWrapper.classList.remove('switching');
+      }, 220);
+    }
+
+    // 初始化第一位角色
+    renderCharacterSelector();
+    updateCharacterDetails(CHARACTERS[0]);
+
+    // 5. 場景探索資料庫與 Three.js 3D 互動城市地圖
+    const LOCATIONS = [
+      {
+        id: 'city',
+        code: 'ZONE 01',
+        name: 'ABANDONED CITY',
+        cname: '被植物吞噬的廢棄都市',
+        danger: 'HIGH // 高度危險',
+        dangerLevel: 75,
+        radiation: '480 mSv/h',
+        resources: ['精密電子零件', '舊時代電池組', '淨化濾芯'],
+        desc: '第七區曾經的商業與科技中心。如今高架橋斷裂，變異巨藤穿透玻璃帷幕，成為野生掠食者與拾荒者幫派交火的天然迷宮。',
+        coords: '28%, 42%',
+        hexColor: '#10b981',
+        textClass: 'text-emerald-400',
+        borderClass: 'border-emerald-500/50',
+        bgGradient: 'from-emerald-950/60 via-zinc-900 to-black'
+      },
+      {
+        id: 'ark',
+        code: 'ZONE 02',
+        name: 'UNDERGROUND ARK',
+        cname: '人類最後的地下避難所',
+        danger: 'LOW // 相對安全',
+        dangerLevel: 20,
+        radiation: '12 mSv/h',
+        resources: ['水耕合成糧食', '基礎醫療包', '情報交易站'],
+        desc: '深埋於岩層之下的多層環形鋼鐵堡壘，容納約四千名倖存者。空氣循環系統發出垂死的轟鳴，內部派系因物資配給問題已瀕臨暴動邊緣。',
+        coords: '52%, 68%',
+        hexColor: '#22d3ee',
+        textClass: 'text-cyan-400',
+        borderClass: 'border-cyan-500/50',
+        bgGradient: 'from-cyan-950/60 via-zinc-900 to-black'
+      },
+      {
+        id: 'lab',
+        code: 'ZONE 03',
+        name: 'RESEARCH FACILITY',
+        cname: '發生能源事故的秘密研究所',
+        danger: 'EXTREME // 極度危險',
+        dangerLevel: 90,
+        radiation: '1,420 mSv/h',
+        resources: ['ECLIPSE 機密檔案', '高純度能量棒', '實驗型武裝'],
+        desc: '封鎖在重力力場牆內的「歐米茄研究所」。大廳仍保留著災難發生瞬間的扭曲殘影，自動防禦機槍塔無差別攻擊任何靠近的生物。',
+        coords: '74%, 35%',
+        hexColor: '#f59e0b',
+        textClass: 'text-amber-400',
+        borderClass: 'border-amber-500/50',
+        bgGradient: 'from-amber-950/60 via-zinc-900 to-black'
+      },
+      {
+        id: 'deadzone',
+        code: 'ZONE 04',
+        name: 'DEAD ZONE',
+        cname: '受到嚴重污染的禁區',
+        danger: 'LETHAL // 致命禁區',
+        dangerLevel: 100,
+        radiation: '4,890 mSv/h',
+        resources: ['核心啟動密鑰', '異變晶體', '未知高維能源'],
+        desc: '城市最深處的零號爆心，天空永遠籠罩著紫紅色的靜電風暴。沒有重型抗輻射裝甲的人類在這裡撐不過十分鐘，高階變異體在此守護著核心。',
+        coords: '62%, 22%',
+        hexColor: '#ef4444',
+        textClass: 'text-red-500',
+        borderClass: 'border-red-500/50',
+        bgGradient: 'from-red-950/70 via-zinc-900 to-black'
+      }
+    ];
+
+    let activeZoneId = 'city';
+    const zoneButtonsGrid = document.getElementById('zone-buttons-grid');
+
+    function renderZoneButtons() {
+      zoneButtonsGrid.innerHTML = '';
+      LOCATIONS.forEach(loc => {
+        const isSelected = loc.id === activeZoneId;
+        const btn = document.createElement('button');
+        btn.className = `p-3 rounded border text-left font-mono transition-all ${
+          isSelected
+            ? `bg-zinc-900 ${loc.borderClass} text-white`
+            : 'bg-zinc-950 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+        }`;
+        btn.innerHTML = `
+          <div class="text-[10px] opacity-75">${loc.code}</div>
+          <div class="text-xs font-bold truncate">${loc.name}</div>
+        `;
+        btn.addEventListener('click', () => selectZone(loc.id));
+        zoneButtonsGrid.appendChild(btn);
+      });
+    }
+
+    function selectZone(zoneId) {
+      activeZoneId = zoneId;
+      renderZoneButtons();
+
+      const loc = LOCATIONS.find(z => z.id === zoneId) || LOCATIONS[0];
+      const card = document.getElementById('zone-info-card');
+      card.className = `lg:col-span-5 rounded-lg border ${loc.borderClass} bg-gradient-to-br ${loc.bgGradient} p-6 sm:p-8 shadow-2xl transition-all duration-500`;
+
+      const badge = document.getElementById('zone-code-badge');
+      badge.textContent = `${loc.code} // SELECTED`;
+      badge.className = `px-2.5 py-1 rounded bg-black/60 border ${loc.borderClass} ${loc.textClass}`;
+
+      document.getElementById('zone-coords').textContent = `COORDS: ${loc.coords}`;
+      document.getElementById('zone-name').textContent = loc.name;
+      document.getElementById('zone-cname').textContent = loc.cname;
+      document.getElementById('zone-radiation').textContent = `RADIATION LEVEL: ${loc.radiation}`;
+      document.getElementById('zone-desc').textContent = loc.desc;
+
+      const dangerText = document.getElementById('zone-danger-text');
+      dangerText.textContent = loc.danger;
+      dangerText.className = loc.textClass;
+
+      const dangerBar = document.getElementById('zone-danger-bar');
+      dangerBar.style.width = `${loc.dangerLevel}%`;
+      dangerBar.style.backgroundColor = loc.hexColor;
+
+      const resList = document.getElementById('zone-resources-list');
+      resList.innerHTML = loc.resources.map(r => 
+        `<span class="text-xs font-mono bg-black/70 border border-zinc-700 text-zinc-200 px-2.5 py-1 rounded">+ ${r}</span>`
+      ).join('');
+    }
+
+    renderZoneButtons();
+    selectZone('city');
+
+    // 初始化 Three.js 3D 廢墟城市全息地圖
+    window.addEventListener('load', () => {
+      const container = document.getElementById('three-canvas-container');
+      if (!container || typeof THREE === 'undefined') return;
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x09090b, 0.032);
+
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      // 燈光系統
+      scene.add(new THREE.AmbientLight(0x27272a, 1.5));
+      const dirLight = new THREE.DirectionalLight(0x94a3b8, 1.2);
+      dirLight.position.set(15, 25, 10);
+      scene.add(dirLight);
+
+      const coreLight = new THREE.PointLight(0x22d3ee, 3, 25);
+      coreLight.position.set(0, 4, 0);
+      scene.add(coreLight);
+
+      const redLight = new THREE.PointLight(0xef4444, 2.5, 20);
+      redLight.position.set(-8, 3, -6);
+      scene.add(redLight);
+
+      // 地面網格與基座
+      const gridHelper = new THREE.GridHelper(40, 40, 0x22d3ee, 0x18181b);
+      gridHelper.material.opacity = 0.25;
+      gridHelper.material.transparent = true;
+      scene.add(gridHelper);
+
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(40, 40),
+        new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.9, metalness: 0.2 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -0.05;
+      scene.add(ground);
+
+      // 廢墟大樓建築群
+      const cityGroup = new THREE.Group();
+      const buildingMat = new THREE.MeshStandardMaterial({ color: 0x1f2428, roughness: 0.7, metalness: 0.6 });
+      const wireframeMat = new THREE.MeshBasicMaterial({ color: 0x3f3f46, wireframe: true, transparent: true, opacity: 0.3 });
+
+      const pseudoRandom = (seed) => {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+      };
+
+      for (let i = 0; i < 65; i++) {
+        const r1 = pseudoRandom(i * 1.1);
+        const r2 = pseudoRandom(i * 2.3);
+        const r3 = pseudoRandom(i * 3.7);
+        const angle = r1 * Math.PI * 2;
+        const radius = 2.5 + r2 * 13;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        const w = 0.6 + r3 * 1.4;
+        const d = 0.6 + r1 * 1.4;
+        const h = 0.8 + r2 * 5.5;
+
+        const geo = new THREE.BoxGeometry(w, h, d);
+        const mesh = new THREE.Mesh(geo, buildingMat);
+        mesh.position.set(x, h / 2, z);
+        if (r3 > 0.7) {
+          mesh.rotation.z = (r1 - 0.5) * 0.25;
+          mesh.rotation.x = (r2 - 0.5) * 0.25;
+        }
+        mesh.add(new THREE.Mesh(geo, wireframeMat));
+        cityGroup.add(mesh);
+      }
+      scene.add(cityGroup);
+
+      // 四大禁區 3D 互動信標
+      const zoneConfigs = [
+        { id: 'city', pos: [-6, 0, 5], color: 0x10b981, height: 4.5 },
+        { id: 'ark', pos: [0, 0, 7], color: 0x22d3ee, height: 2.0 },
+        { id: 'lab', pos: [7, 0, -3], color: 0xf59e0b, height: 3.8 },
+        { id: 'deadzone', pos: [0, 0, -5], color: 0xef4444, height: 6.5 }
+      ];
+
+      const zonesMeshMap = {};
+      const interactiveObjects = [];
+
+      zoneConfigs.forEach(z => {
+        const group = new THREE.Group();
+        group.position.set(...z.pos);
+
+        const tower = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.6, 1.1, z.height, 6),
+          new THREE.MeshStandardMaterial({ color: 0x18181b, emissive: z.color, emissiveIntensity: 0.25, roughness: 0.4, metalness: 0.8 })
+        );
+        tower.position.y = z.height / 2;
+        tower.userData = { zoneId: z.id };
+        group.add(tower);
+        interactiveObjects.push(tower);
+
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(1.3, 1.5, 32),
+          new THREE.MeshBasicMaterial({ color: z.color, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.15;
+        ring.userData = { zoneId: z.id };
+        group.add(ring);
+        interactiveObjects.push(ring);
+
+        const marker = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.45, 0),
+          new THREE.MeshBasicMaterial({ color: z.color, wireframe: true })
+        );
+        marker.position.y = z.height + 1.2;
+        marker.userData = { zoneId: z.id };
+        group.add(marker);
+        interactiveObjects.push(marker);
+
+        const beam = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.05, 0.4, z.height + 2, 16, 1, true),
+          new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
+        );
+        beam.position.y = (z.height + 2) / 2;
+        group.add(beam);
+
+        scene.add(group);
+        zonesMeshMap[z.id] = { tower, ring, marker };
+      });
+
+      // 懸浮輻射粒子
+      const particleCount = 450;
+      const particleGeo = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      for (let i = 0; i < particleCount * 3; i += 3) {
+        positions[i] = (Math.random() - 0.5) * 35;
+        positions[i + 1] = Math.random() * 14;
+        positions[i + 2] = (Math.random() - 0.5) * 35;
+      }
+      particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const particles = new THREE.Points(
+        particleGeo,
+        new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.12, transparent: true, opacity: 0.55 })
+      );
+      scene.add(particles);
+
+      // 軌道攝影機控制
+      let isDragging = false;
+      let prevPos = { x: 0, y: 0 };
+      let spherical = { radius: 22, theta: Math.PI / 4, phi: Math.PI / 3.2 };
+      let dragDist = 0;
+
+      const updateCam = () => {
+        spherical.phi = Math.max(0.35, Math.min(Math.PI / 2.15, spherical.phi));
+        spherical.radius = Math.max(11, Math.min(34, spherical.radius));
+        camera.position.x = spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+        camera.position.y = spherical.radius * Math.cos(spherical.phi);
+        camera.position.z = spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+        camera.lookAt(0, 1.5, 0);
+      };
+      updateCam();
+
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      const onDown = (x, y) => { isDragging = true; dragDist = 0; prevPos = { x, y }; };
+      const onMove = (x, y) => {
+        if (!isDragging) return;
+        const dx = x - prevPos.x;
+        const dy = y - prevPos.y;
+        dragDist += Math.abs(dx) + Math.abs(dy);
+        spherical.theta -= dx * 0.007;
+        spherical.phi -= dy * 0.007;
+        updateCam();
+        prevPos = { x, y };
+      };
+      const onUp = (x, y) => {
+        isDragging = false;
+        if (dragDist < 6) {
+          const rect = renderer.domElement.getBoundingClientRect();
+          mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+          mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera(mouse, camera);
+          const hits = raycaster.intersectObjects(interactiveObjects);
+          if (hits.length > 0 && hits[0].object.userData.zoneId) {
+            selectZone(hits[0].object.userData.zoneId);
+          }
+        }
+      };
+
+      const dom = renderer.domElement;
+      dom.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+      window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+      window.addEventListener('mouseup', e => onUp(e.clientX, e.clientY));
+      dom.addEventListener('touchstart', e => { if (e.touches.length === 1) onDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+      dom.addEventListener('touchmove', e => { if (e.touches.length === 1) onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+      dom.addEventListener('touchend', e => { if (e.changedTouches.length === 1) onUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY); });
+      dom.addEventListener('wheel', e => {
+        e.preventDefault();
+        spherical.radius += e.deltaY * 0.015;
+        updateCam();
+      }, { passive: false });
+
+      window.addEventListener('resize', () => {
+        if (!container) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      });
+
+      const clock = new THREE.Clock();
+      function animate() {
+        requestAnimationFrame(animate);
+        const elapsed = clock.getElapsedTime();
+
+        if (!isDragging) {
+          spherical.theta += 0.0015;
+          updateCam();
+        }
+
+        particles.rotation.y = elapsed * 0.03;
+        particles.position.y = Math.sin(elapsed * 0.5) * 0.3;
+
+        Object.entries(zonesMeshMap).forEach(([id, obj]) => {
+          const isSel = id === activeZoneId;
+          obj.marker.rotation.y = elapsed * (isSel ? 2.5 : 1.0);
+          obj.marker.position.y = obj.tower.geometry.parameters.height + 1.2 + Math.sin(elapsed * 3) * 0.2;
+          const s = isSel ? 1.35 + Math.sin(elapsed * 5) * 0.1 : 1.0;
+          obj.ring.scale.set(s, s, 1);
+          obj.tower.material.emissiveIntensity = isSel ? 0.75 : 0.2;
+        });
+
+        renderer.render(scene, camera);
+      }
+      animate();
+    });
+
+    // 6. 最終抉擇三種結局互動邏輯
+    const ENDINGS = {
+      rebirth: {
+        code: 'ENDING // 01 // OUTCOME CONFIRMED',
+        title: 'REBIRTH — 重建文明',
+        subtitle: '讓光明再次降臨第七區，即便伴隨著未知的代價。',
+        desc: '你將晶片推入主控槽，壓抑了百年的地熱與零點能源矩陣轟然啟動。湛藍的光柱直衝雲霄，驅散了盤踞在第七區上空的灰暗塵霧。ARK 避難所的燈火重新亮起，人類迎來了第二次黎明——但地底深處的空間裂縫，也同時睜開了眼睛。',
+        textClass: 'text-cyan-400',
+        borderClass: 'border-cyan-500',
+        orbClass: 'bg-cyan-400 shadow-[0_0_80px_rgba(34,211,238,0.6)] scale-110'
+      },
+      truth: {
+        code: 'ENDING // 02 // OUTCOME CONFIRMED',
+        title: 'THE TRUTH — 揭露真相',
+        subtitle: '以全球廣播喚醒世人，讓人類直面自己犯下的原罪。',
+        desc: '你放棄了單純重啟能源的捷徑，將所有電力導向軌道衛星通訊陣列。ECLIPSE 計畫的血腥實驗檔案向全球殘存的避難所無差別廣播。人類在震驚與痛苦中看清了歷史的謊言，決定不再依賴危險的禁忌能源，而是以雙手在廢墟中建立真正透明的新秩序。',
+        textClass: 'text-amber-400',
+        borderClass: 'border-amber-500',
+        orbClass: 'bg-amber-400 shadow-[0_0_80px_rgba(245,158,11,0.6)] scale-110'
+      },
+      extinction: {
+        code: 'ENDING // 03 // OUTCOME CONFIRMED',
+        title: 'EXTINCTION — 走向毀滅',
+        subtitle: '徹底引爆核心，終結這場延續百年的錯誤實驗。',
+        desc: '你啟動了反應爐的過載自毀程序。人類的貪婪造就了這座煉獄，唯有徹底抹除零點能源的存在，地球才能獲得真正的平靜。在耀眼奪目的白光吞沒第七區的瞬間，你彷彿聽見了風吹過草原的聲音——沒有人類的地球，終將迎來屬於自然的伊甸園。',
+        textClass: 'text-red-500',
+        borderClass: 'border-red-500',
+        orbClass: 'bg-red-500 shadow-[0_0_80px_rgba(239,68,68,0.65)] scale-110'
+      }
+    };
+
+    const endingBtns = document.querySelectorAll('.ending-btn');
+    const resultCard = document.getElementById('ending-result-card');
+    const coreOrb = document.getElementById('final-core-orb');
+
+    endingBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.ending;
+        const data = ENDINGS[key];
+        if (!data) return;
+
+        // 重設按鈕樣式
+        endingBtns.forEach(b => {
+          b.classList.remove('scale-[1.03]', 'shadow-xl', 'border-cyan-500', 'border-amber-500', 'border-red-500');
+          b.classList.add('border-zinc-800');
+        });
+        btn.classList.remove('border-zinc-800');
+        btn.classList.add(data.borderClass, 'scale-[1.03]', 'shadow-xl');
+
+        // 改變中央核心發光色彩
+        coreOrb.className = `absolute w-20 h-20 sm:w-24 sm:h-24 rounded-full transition-all duration-700 flex items-center justify-center ${data.orbClass}`;
+
+        // 顯示結局卡片內容
+        resultCard.classList.remove('hidden', 'border-cyan-500', 'border-amber-500', 'border-red-500');
+        resultCard.classList.add(data.borderClass);
+
+        const codeEl = document.getElementById('ending-code');
+        codeEl.textContent = data.code;
+        codeEl.className = `font-mono text-xs tracking-widest mb-2 ${data.textClass}`;
+
+        document.getElementById('ending-title').textContent = data.title;
+        
+        const subEl = document.getElementById('ending-subtitle');
+        subEl.textContent = data.subtitle;
+        subEl.className = `text-sm font-medium mb-4 ${data.textClass}`;
+
+        document.getElementById('ending-desc').textContent = data.desc;
+      });
+    });
+  </script>
+</body>
+</html>
